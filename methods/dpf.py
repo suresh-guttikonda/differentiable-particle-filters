@@ -40,14 +40,14 @@ class DPF():
 
         # define some more parameters and placeholders
         self.state_dim = 3
-        self.placeholders = {'o': tf.placeholder('float32', [None, None, 24, 24, 3], 'observations'),
-                             'a': tf.placeholder('float32', [None, None, 3], 'actions'),
-                             's': tf.placeholder('float32', [None, None, 3], 'states'),
-                             'num_particles': tf.placeholder('float32'),
-                             'keep_prob': tf.placeholder_with_default(tf.constant(1.0), []),
+        self.placeholders = {'o': tf.keras.Input(name='observations', shape=[None, None, 24, 24, 3], dtype=tf.dtypes.float32),
+                             'a': tf.keras.Input(name='actions', shape=[None, None, 3], dtype=tf.dtypes.float32),
+                             's': tf.keras.Input(name='states', shape=[None, None, 3], dtype=tf.dtypes.float32),
+                             'num_particles': tf.keras.Input(name='num_particles', shape=[], dtype=tf.dtypes.float32),
+                             'keep_prob': tf.keras.Input(name='keep_prob', tensor=tf.constant(1.0), shape=[], dtype=tf.dtypes.float32),
                              }
         self.num_particles_float = self.placeholders['num_particles']
-        self.num_particles = tf.to_int32(self.num_particles_float)
+        self.num_particles = tf.cast(self.num_particles_float, tf.int32)
 
         # build learnable modules
         self.build_modules(min_obs_likelihood, proposer_keep_ratio)
@@ -64,20 +64,20 @@ class DPF():
 
         # conv net for encoding the image
         self.encoder = snt.Sequential([
-            snt.nets.ConvNet2D([16, 32, 64], [[3, 3]], [2], [snt.SAME], activate_final=True, name='encoder/convnet'),
-            snt.BatchFlatten(),
+            snt.Conv2D([16, 32, 64], [[3, 3]], [2], ['SAME'], name='encoder_convnet'),
+            snt.Flatten(),
             lambda x: tf.nn.dropout(x,  self.placeholders['keep_prob']),
-            snt.Linear(128, name='encoder/linear'),
+            snt.Linear(128, name='encoder_linear'),
             tf.nn.relu
         ])
 
         # observation likelihood estimator that maps states and image encodings to probabilities
         self.obs_like_estimator = snt.Sequential([
-            snt.Linear(128, name='obs_like_estimator/linear'),
+            snt.Linear(128, name='obs_like_estimator_linear0'),
             tf.nn.relu,
-            snt.Linear(128, name='obs_like_estimator/linear'),
+            snt.Linear(128, name='obs_like_estimator_linear1'),
             tf.nn.relu,
-            snt.Linear(1, name='obs_like_estimator/linear'),
+            snt.Linear(1, name='obs_like_estimator_linear2'),
             tf.nn.sigmoid,
             lambda x: x * (1 - min_obs_likelihood) + min_obs_likelihood
         ], name='obs_like_estimator')
@@ -92,16 +92,16 @@ class DPF():
         # particle proposer that maps encodings to particles (if we want to use it)
         if self.use_proposer:
             self.particle_proposer = snt.Sequential([
-                snt.Linear(128, name='particle_proposer/linear'),
+                snt.Linear(128, name='particle_proposer_linear0'),
                 tf.nn.relu,
                 lambda x: tf.nn.dropout(x,  proposer_keep_ratio),
-                snt.Linear(128, name='particle_proposer/linear'),
+                snt.Linear(128, name='particle_proposer_linear1'),
                 tf.nn.relu,
-                snt.Linear(128, name='particle_proposer/linear'),
+                snt.Linear(128, name='particle_proposer_linear2'),
                 tf.nn.relu,
-                snt.Linear(128, name='particle_proposer/linear'),
+                snt.Linear(128, name='particle_proposer_linear3'),
                 tf.nn.relu,
-                snt.Linear(4, name='particle_proposer/linear'),
+                snt.Linear(4, name='particle_proposer_linear4'),
                 tf.nn.tanh,
             ])
 
