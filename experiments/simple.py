@@ -12,13 +12,13 @@ def train_dpf(task='nav01', data_path='../data/100s', model_path='../models/tmp'
     noisy_train_data = noisyfy_data(train_data)
 
     # reset tensorflow graph
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
     # instantiate method
     hyperparams = get_default_hyperparams()
     method = DPF(**hyperparams['global'])
 
-    with tf.Session() as session:
+    with tf.compat.v1.Session() as session:
         # train method and save result in model_path
         method.fit(session, noisy_train_data, model_path, **hyperparams['train'], plot_task=task, plot=plot)
 
@@ -31,7 +31,7 @@ def test_dpf(task='nav01', data_path='../data/100s', model_path='../models/tmp')
     test_batch_iterator = make_batch_iterator(noisy_test_data, seq_len=50)
 
     # reset tensorflow graph
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
 
     # instantiate method
     hyperparams = get_default_hyperparams()
